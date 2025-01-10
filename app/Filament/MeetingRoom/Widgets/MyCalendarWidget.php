@@ -236,6 +236,19 @@ class MyCalendarWidget extends CalendarWidget
         return $data;
     }
 
+    private static function isRoomAvailable($newResourceId, $startTime, $endTime): bool
+    {
+        // Check if the room exists in the bookings table with overlapping time
+        $roomExists = Booking::query()
+            ->where('room_id', $newResourceId)
+            ->where('start_time', '<', $endTime)
+            ->where('end_time', '>', $startTime)
+            ->exists();
+
+        // If a room exists with overlapping time, return false; otherwise, true
+        return !$roomExists;
+    }
+
     public function getDateClickContextMenuActions(): array
     {
         return $this->getDateContextMenuActions();
@@ -304,6 +317,15 @@ class MyCalendarWidget extends CalendarWidget
                 $startsAt->addSeconds(data_get($delta, 'seconds'));
                 $endsAt->addSeconds(data_get($delta, 'seconds'));
                 $newIdResource = data_get($info, 'newResource.id');
+                if (!self::isRoomAvailable($newIdResource, $startsAt, $endsAt)) {
+                    Notification::make()
+                        ->title('Action Failed')
+                        ->body('The room is not available at the selected time.')
+                        ->danger()
+                        ->send();
+                    return false;
+                }
+
                 if (is_numeric($newIdResource) && $newIdResource) {
                     $record->update([
                         'room_id' => $newIdResource,
