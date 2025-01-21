@@ -30,7 +30,8 @@ class MyCalendarWidget extends CalendarWidget
             \Guava\Calendar\Actions\CreateAction::make('CreateMeeting')
                 ->model(Booking::class)
                 ->steps(Schema::eventSchema())
-                ->closeModalByClickingAway(false),
+                ->closeModalByClickingAway(false)
+                ->modalWidth(\Filament\Support\Enums\MaxWidth::SevenExtraLarge),
         ];
     }
 

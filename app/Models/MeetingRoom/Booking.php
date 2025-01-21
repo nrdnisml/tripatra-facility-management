@@ -21,6 +21,7 @@ class Booking extends Model implements Eventable
         'end_time' => 'datetime',
         'confirmed_at' => 'datetime',
         'internal_participants' => 'array',
+        'external_participants' => 'array',
         'status' => 'string',
     ];
 
