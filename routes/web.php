@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\SocialiteController;
 use Illuminate\Support\Facades\Route;
 
@@ -12,3 +13,4 @@ Route::get('/auth/redirect', [SocialiteController::class, 'redirect'])
     ->name('socialite.redirect');
 Route::get('/auth/callback', [SocialiteController::class, 'callback'])
     ->name('socialite.callback');
+Route::get('/', [AuthController::class, 'index'])->name('login');

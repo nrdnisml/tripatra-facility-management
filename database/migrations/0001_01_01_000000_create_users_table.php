@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('password')->nullable(); // User Name
             $table->string('ad_id')->nullable(); // Active Directory ID
             $table->timestamps(); // Created and Updated timestamps
+            $table->rememberToken();
         });
 
         Schema::create('user_roles', function (Blueprint $table) {

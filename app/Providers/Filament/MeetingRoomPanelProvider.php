@@ -27,7 +27,8 @@ class MeetingRoomPanelProvider extends PanelProvider
             ->default()
             ->id('meeting-room')
             ->path('meeting-room')
-            ->login()
+            ->brandName('Focus - Meeting Room')
+            ->sidebarCollapsibleOnDesktop()
             ->colors([
                 'primary' => Color::Amber,
             ])

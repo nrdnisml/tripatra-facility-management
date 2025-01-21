@@ -20,7 +20,7 @@ class SocialiteController extends Controller
             $user_ad = Socialite::driver('azure')->stateless()->user();
             $email = strtolower($user_ad->email);
             $this->dumpNonTripatra($email);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return redirect()->back();
         }
         $user = User::where('email', $email)->first();
@@ -47,7 +47,7 @@ class SocialiteController extends Controller
         Auth()->login($user, true);
 
         // direct to list of project so user must choose one project before visiting the dashboard
-        return redirect()->intended(route('filament.admin.pages.dashboard'));
+        return redirect()->intended(route('filament.meeting-room.pages.dashboard'));
     }
 
     private function dumpNonTripatra(string $email)

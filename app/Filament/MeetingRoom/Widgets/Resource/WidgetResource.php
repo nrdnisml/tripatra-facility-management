@@ -69,14 +69,19 @@ class WidgetResource extends BaseWidget
         return $data;
     }
 
-    public static function isRoomAvailable($newResourceId, $startTime, $endTime): bool
+    public static function isRoomAvailable($newResourceId, $startTime, $endTime, $bookingId = null): bool
     {
         // Check if the room exists in the bookings table with overlapping time
-        $roomExists = Booking::query()
+        $query = Booking::query()
             ->where('room_id', $newResourceId)
             ->where('start_time', '<', $endTime)
-            ->where('end_time', '>', $startTime)
-            ->exists();
+            ->where('end_time', '>', $startTime);
+
+        if ($bookingId) {
+            $query->where('id', '!=', $bookingId);
+        }
+
+        $roomExists = $query->exists();
 
         // If a room exists with overlapping time, return false; otherwise, true
         return !$roomExists;

@@ -21,7 +21,7 @@ return new class extends Migration
             $table->foreign('connected_room_id')->references('id')->on('rooms')->onDelete('cascade');
 
             // Ensure Unique Room Connections
-            $table->unique(['room_id', 'connected_room_id']);
+            // $table->unique(['room_id', 'connected_room_id']);
             $table->timestamps();
         });
     }

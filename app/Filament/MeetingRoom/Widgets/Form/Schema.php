@@ -9,6 +9,7 @@ use Filament\Forms\Components\Group;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Wizard\Step;
 use Filament\Forms\Get;
 
 class Schema
@@ -17,55 +18,131 @@ class Schema
     {
         $accounts = \App\Helpers\TripatraUser::getAccountNameIds();
         return  [
-            Fieldset::make('Booking Time')->schema([
-                DateTimePicker::make('start_time')
-                    ->label('Start Date & Time')
-                    ->seconds(false)
-                    ->required()
-                    ->live(onBlur: true),
-                DateTimePicker::make('end_time')
-                    ->label('End Date & Time')
-                    ->seconds(false)
-                    ->required()
-                    ->live(onBlur: true),
-            ])->columns(2),
-            Fieldset::make('Select Meeting Room & Add Participants')->schema([
-                Select::make('room_id')
-                    ->label('Meeting Rooms')
-                    ->hint(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
-                    ->options(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time')))
-                    ->searchable()
-                    ->preload()
-                    ->required(),
-                Select::make('booked_for')
-                    ->label('Participants')
-                    ->multiple()
-                    ->options($accounts),
-            ])->columns(2),
-            Fieldset::make('Booking Details')->schema([
-                Select::make('project_id')
-                    ->label('Project Name')
-                    ->helperText('Keep empty if not applicable')
-                    ->options(\App\Models\Project::query()->pluck('project_name', 'id'))
-                    ->searchable(),
-                Select::make('booking_type')
-                    ->label('Meeting Type')
-                    ->options([
-                        'internal' => 'Internal',
-                        'eksternal' => 'Eksternal',
-                    ])
-                    ->default('internal')
-                    ->required(),
-                TextInput::make('title')
-                    ->label('Meeting Description')
-                    ->required()
-                    ->columnSpanFull(),
+            Step::make('Booking')->schema([
+                Fieldset::make('Booking Time')->schema([
+                    DateTimePicker::make('start_time')
+                        ->native(false)
+                        ->displayFormat('d-M-Y h:i A')
+                        ->label('Start Date & Time')
+                        ->seconds(false)
+                        ->required()
+                        ->before('end_time')
+                        ->live(onBlur: true),
+                    DateTimePicker::make('end_time')
+                        ->native(false)
+                        ->displayFormat('d-M-Y h:i A')
+                        ->label('End Date & Time')
+                        ->seconds(false)
+                        ->required()
+                        ->after('start_time')
+                        ->live(onBlur: true),
+                ])->columns(2)
+            ]),
+            Step::make('Select Room')->schema([
+                Fieldset::make('Select Meeting Room & Add Participants')->schema([
+                    Select::make('room_id')
+                        ->label('Meeting Rooms')
+                        ->hint(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
+                        ->options(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time')))
+                        ->searchable()
+                        ->preload()
+                        ->required(),
+                    Select::make('internal_participants')
+                        ->label('Participants')
+                        ->multiple()
+                        ->options($accounts),
+                ])->columns(2),
+                Fieldset::make('Booking Details')->schema([
+                    Select::make('project_id')
+                        ->label('Project Name')
+                        ->helperText('Keep empty if not applicable')
+                        ->options(\App\Models\Project::query()->pluck('project_name', 'id'))
+                        ->searchable(),
+                    Select::make('booking_type')
+                        ->label('Meeting Type')
+                        ->options([
+                            'internal' => 'Internal',
+                            'eksternal' => 'Eksternal',
+                        ])
+                        ->default('internal')
+                        ->required(),
+                    TextInput::make('title')
+                        ->label('Meeting Description')
+                        ->required()
+                        ->columnSpanFull(),
+                    // Hidden Fields
+                    Hidden::make('booked_by')->default(auth()->user()->id),
+                    Hidden::make('status')->default('booked'),
+                ])
+            ]),
+        ];
+    }
 
-            ])->columns(2),
+    public static function formSchema()
+    {
+        $accounts = \App\Helpers\TripatraUser::getAccountNameIds();
+        return  [
+            \Filament\Forms\Components\Wizard::make([
+                Step::make('Booking')->schema([
+                    Fieldset::make('Booking Time')->schema([
+                        DateTimePicker::make('start_time')
+                            ->native(false)
+                            ->displayFormat('d-M-Y h:i A')
+                            ->label('Start Date & Time')
+                            ->seconds(false)
+                            ->required()
+                            ->before('end_time')
+                            ->live(onBlur: true),
+                        DateTimePicker::make('end_time')
+                            ->native(false)
+                            ->displayFormat('d-M-Y h:i A')
+                            ->label('End Date & Time')
+                            ->seconds(false)
+                            ->required()
+                            ->after('start_time')
+                            ->live(onBlur: true),
+                    ])->columns(2)
+                ]),
+                Step::make('Select Room')->schema([
+                    Fieldset::make('Select Meeting Room & Add Participants')->schema([
+                        Select::make('room_id')
+                            ->label('Meeting Rooms')
+                            ->hint(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
+                            ->options(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time')))
+                            ->searchable()
+                            ->preload()
+                            ->required(),
+                        Select::make('internal_participants')
+                            ->label('Participants')
+                            ->multiple()
+                            ->options($accounts),
+                    ])->columns(2),
+                    Fieldset::make('Booking Details')->schema([
+                        Select::make('project_id')
+                            ->label('Project Name')
+                            ->helperText('Keep empty if not applicable')
+                            ->options(\App\Models\Project::query()->pluck('project_name', 'id'))
+                            ->searchable(),
+                        Select::make('booking_type')
+                            ->label('Meeting Type')
+                            ->options([
+                                'internal' => 'Internal',
+                                'eksternal' => 'Eksternal',
+                            ])
+                            ->default('internal')
+                            ->required(),
+                        TextInput::make('title')
+                            ->label('Meeting Description')
+                            ->required()
+                            ->columnSpanFull(),
+                        // Hidden Fields
+                        Hidden::make('booked_by')->default(auth()->user()->id),
+                        Hidden::make('status')->default('booked'),
+                    ])->columns(2)
+                ])
+            ]),
 
-            // Hidden Fields
-            Hidden::make('booked_by')->default(auth()->user()->id),
-            Hidden::make('status')->default('booked'),
+
         ];
     }
 
@@ -75,15 +152,21 @@ class Schema
         return  [
             Group::make([
                 DateTimePicker::make('start_time')
+                    ->native(false)
+                    ->displayFormat('d-M-Y h:i A')
                     ->label('Start Date & Time')
                     ->seconds(false)
-                    ->live(onBlur: true)
-                    ->required(),
+                    ->required()
+                    ->before('end_time')
+                    ->live(onBlur: true),
                 DateTimePicker::make('end_time')
+                    ->native(false)
+                    ->displayFormat('d-M-Y h:i A')
                     ->label('End Date & Time')
                     ->seconds(false)
-                    ->live(onBlur: true)
-                    ->required(),
+                    ->required()
+                    ->after('start_time')
+                    ->live(onBlur: true),
                 Select::make('room_id')
                     ->label('Meeting Rooms')
                     ->hint(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
@@ -108,7 +191,7 @@ class Schema
                     ->searchable(),
 
             ])->columns(2),
-            Select::make('booked_for')
+            Select::make('internal_participants')
                 ->label('Participants')
                 ->multiple()
                 ->options($accounts),
