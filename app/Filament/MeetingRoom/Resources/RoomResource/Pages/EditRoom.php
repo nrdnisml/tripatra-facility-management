@@ -21,4 +21,9 @@ class EditRoom extends EditRecord
     {
         return $this->getResource()::getUrl('index');
     }
+
+    protected function before()
+    {
+        dd($this->record);
+    }
 }

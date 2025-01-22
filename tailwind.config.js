@@ -9,6 +9,7 @@ export default {
         './resources/**/*.js',
         './resources/**/*.vue',
         './vendor/guava/calendar/resources/**/*.blade.php',
+        './vendor/awcodes/filament-table-repeater/resources/**/*.blade.php'
     ],
     theme: {
         extend: {

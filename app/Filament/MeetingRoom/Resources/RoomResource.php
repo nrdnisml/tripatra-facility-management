@@ -7,6 +7,7 @@ use App\Filament\MeetingRoom\Resources\RoomResource\RelationManagers;
 use App\Filament\MeetingRoom\Resources\RoomResource\RelationManagers\ConnectedRoomsRelationManager;
 use App\Models\MeetingRoom\Room;
 use Filament\Forms;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
@@ -63,6 +64,23 @@ class RoomResource extends Resource
                             $input.startsWith('34') || $input.startsWith('37') ? '99' : '99'
                         JS))
                     ->placeholder('0')
+                    ->required(),
+                FileUpload::make('room_pictures')
+                    ->multiple()
+                    ->disk('azure')
+                    ->directory('meeting-room')
+                    ->openable()
+                    ->reorderable()
+                    ->appendFiles()
+                    ->panelLayout('grid'),
+                Select::make('room_layouts')
+                    ->options([
+                        'CLASSROOM' => 'CLASSROOM',
+                        'U-SHAPE' => 'U-SHAPE',
+                        'ROUND TABLE' => 'ROUND TABLE',
+                        'THEATER' => 'THEATER',
+                    ])
+                    ->default('CLASSROOM')
                     ->required(),
                 Radio::make('bookable')
                     ->label('Is this room bookable?')

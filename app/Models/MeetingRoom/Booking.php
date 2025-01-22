@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Guava\Calendar\Contracts\Eventable;
 use Guava\Calendar\ValueObjects\Event;
+use Illuminate\Database\Eloquent\Builder;
 
 class Booking extends Model implements Eventable
 {
@@ -19,9 +20,23 @@ class Booking extends Model implements Eventable
         'start_time' => 'datetime',
         'end_time' => 'datetime',
         'confirmed_at' => 'datetime',
-        'booked_for' => 'array',
+        'internal_participants' => 'array',
+        'external_participants' => 'array',
         'status' => 'string',
     ];
+
+    // protected static function booted(): void
+    // {
+    //     static::addGlobalScope('userAccess', function (Builder $builder) {
+    //         $roles = auth()->user()->load('roles')->roles()->first();
+    //         if ($roles->role_name == 'user' && $roles->module == 'all') {
+    //             $builder->where('booked_by', auth()->user()->id);
+    //         }
+    //         if ($roles->role_name == 'admin' && $roles->module == 'meeting-room') {
+    //             $builder;
+    //         }
+    //     });
+    // }
 
     public function room()
     {

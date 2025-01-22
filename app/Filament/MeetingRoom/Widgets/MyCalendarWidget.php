@@ -6,8 +6,10 @@ use App\Filament\MeetingRoom\Widgets\Form\Schema;
 use App\Filament\MeetingRoom\Widgets\Resource\WidgetResource;
 use App\Models\MeetingRoom\Booking;
 use Carbon\Carbon;
+use Filament\Actions\EditAction;
 use Filament\Notifications\Notification;
 use \Guava\Calendar\Widgets\CalendarWidget;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\HtmlString;
 
@@ -27,7 +29,9 @@ class MyCalendarWidget extends CalendarWidget
         return [
             \Guava\Calendar\Actions\CreateAction::make('CreateMeeting')
                 ->model(Booking::class)
-                ->form(Schema::eventSchema()),
+                ->steps(Schema::eventSchema())
+                ->closeModalByClickingAway(false)
+                ->modalWidth(\Filament\Support\Enums\MaxWidth::SevenExtraLarge),
         ];
     }
 
@@ -51,11 +55,26 @@ class MyCalendarWidget extends CalendarWidget
         ];
     }
 
-
     public function getEventClickContextMenuActions(): array
     {
         return [
-            $this->editAction(),
+            $this->editAction()
+                ->before(function (EditAction $action, array $data, Booking $record) {
+                    if (!WidgetResource::isRoomAvailable(
+                        $data['room_id'],
+                        $data['start_time'],
+                        $data['end_time'],
+                        $record->id
+                    )) {
+                        Notification::make()
+                            ->title('Action Failed')
+                            ->body('The room is not available at the selected time.')
+                            ->danger()
+                            ->send();
+                        $action->cancel();
+                    }
+                })
+                ->closeModalByClickingAway(false),
             $this->deleteAction(),
         ];
     }
@@ -140,10 +159,58 @@ class MyCalendarWidget extends CalendarWidget
         return false;
     }
 
+    public function onEventResize(array $info = []): bool
+    {
+        parent::onEventResize($info);
+
+        $record = $this->getEventRecord();
+        if (!auth()->user()->can('update', $record)) {
+            // If not authorized, show a notification and return
+            Notification::make()
+                ->title('Action Failed')
+                ->body('You do not have permission to move this booking.')
+                ->danger()
+                ->send();
+            return false;
+        }
+
+
+        if ($delta = data_get($info, 'endDelta')) {
+            $endsAt = $record->end_time;
+            $endsAt->addSeconds(data_get($delta, 'seconds'));
+
+            if (!WidgetResource::isRoomAvailable(
+                $record->room_id,
+                $record->start_time,
+                $endsAt,
+                $record->id
+            )) {
+                Notification::make()
+                    ->title('Action Failed')
+                    ->body('The room is not available at the selected time.')
+                    ->danger()
+                    ->send();
+                return false;
+            }
+
+            $record->update([
+                'end_time' => $endsAt,
+            ]);
+        }
+
+        Notification::make()
+            ->title('Booking duration changed!')
+            ->success()
+            ->send();
+
+        return true;
+    }
+
     private function getDateContextMenuActions()
     {
         $data = [
             \Guava\Calendar\Actions\CreateAction::make('ctxCreateMeeting')
+                ->closeModalByClickingAway(false)
                 ->model(Booking::class)
                 ->mountUsing(function (\Filament\Forms\Form $form, array $arguments) {
                     $roomId = data_get($arguments, 'resource.id');
@@ -164,7 +231,7 @@ class MyCalendarWidget extends CalendarWidget
                             'room_id' => $roomId,
                             'start_time' => Carbon::make($startsTime),
                             'end_time' => Carbon::make($endsTime),
-                            'booked_for' => auth()->user()->id,
+                            'internal_participants' => auth()->user()->id,
                             'status' => 'booked',
                             'booking_type' => 'internal',
                             'booked_by' => auth()->user()->id,

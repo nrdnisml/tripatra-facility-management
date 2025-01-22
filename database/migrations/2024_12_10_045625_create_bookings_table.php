@@ -18,14 +18,17 @@ return new class extends Migration
             $table->string('title', 255); // Booking Title
             $table->datetime('start_time'); // Start Time
             $table->datetime('end_time'); // End Time
-            $table->enum('status', ['booked', 'confirmed', 'cancelled']); // Booking Status
-            $table->enum('booking_type', ['internal', 'eksternal']); // Booking Type
-            $table->unsignedBigInteger('booked_by'); // Foreign Key to Users table
-            $table->json('booked_for')->nullable(); // JSON column for booked users
+            $table->enum('status', ['booked', 'confirmed', 'cancelled']);
+            $table->enum('booking_type', ['internal', 'eksternal']);
+            $table->unsignedBigInteger('booked_by');
+            $table->json('internal_participants')->nullable();
+            $table->json('external_participants')->nullable();
+            $table->integer('number_of_participants')->nullable();
             $table->datetime('confirmed_at')->nullable(); // Confirmation Timestamp
             $table->timestamps(); // Created and Updated timestamps
-            $table->text('remark')->nullable();
+            $table->text('note')->nullable();
             $table->string('cancelled_by')->nullable();
+            $table->json('additional_requests')->nullable();
 
             // Foreign Key Constraints
             $table->foreign('room_id')->references('id')->on('rooms')->onDelete('cascade');

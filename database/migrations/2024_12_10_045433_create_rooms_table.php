@@ -19,6 +19,8 @@ return new class extends Migration
             $table->boolean('bookable')->default(true); // Bookable Status
             $table->boolean('mergeable')->default(false); // Mergeable Status
             $table->json('facilities')->nullable(); // JSON column for facilities
+            $table->json('room_pictures')->nullable();
+            $table->json('room_layouts')->nullable();
             $table->datetime('not_available_from')->nullable(); // Datetime to set room available for booking
             $table->datetime('not_available_to')->nullable(); // Datetime to set room available for booking
             $table->text('remark')->nullable();

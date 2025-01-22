@@ -3,7 +3,10 @@
 namespace App\Filament\MeetingRoom\Resources;
 
 use App\Filament\MeetingRoom\Resources\BookingResource\Pages;
+use App\Filament\MeetingRoom\Widgets\Form\Schema;
+use App\Models\MeetingRoom\Booking;
 use App\Models\MeetingRoom\Room;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\Hidden;
@@ -14,11 +17,16 @@ use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
+use Filament\Tables\Filters\QueryBuilder\Constraints\RelationshipConstraint;
+use Filament\Tables\Filters\QueryBuilder\Constraints\RelationshipConstraint\Operators\IsRelatedToOperator;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class BookingResource extends Resource
 {
-    protected static ?string $model = \App\Models\MeetingRoom\Booking::class;
+    protected static ?string $model = Booking::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
 
@@ -28,70 +36,36 @@ class BookingResource extends Resource
     {
         $accounts = \App\Helpers\TripatraUser::getAccountNameIds();
         return $form
-            ->schema([
-                Fieldset::make('Booking Time')->schema([
-                    DateTimePicker::make('start_time')
-                        ->label('Start Date & Time')
-                        ->seconds(false)
-                        ->required()
-                        ->live(onBlur: true),
-                    DateTimePicker::make('end_time')
-                        ->label('End Date & Time')
-                        ->seconds(false)
-                        ->required()
-                        ->live(onBlur: true),
-                ])->columns(2),
-                Fieldset::make('Select Meeting Room & Add Participants')->schema([
-                    Select::make('room_id')
-                        ->label('Meeting Rooms')
-                        ->hint(fn (Get $get) => self::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
-                        ->options(fn (Get $get) => self::getAvailableRooms($get('start_time'), $get('end_time')))
-                        ->searchable()
-                        ->required(),
-                    Select::make('booked_for')
-                        ->label('Participants')
-                        ->multiple()
-                        ->options($accounts),
-                ])->columns(2),
-                Fieldset::make('Booking Details')->schema([
-                    Select::make('project_id')
-                        ->label('Project Name')
-                        ->helperText('Keep empty if not applicable')
-                        ->options(\App\Models\Project::query()->pluck('project_name', 'id'))
-                        ->searchable(),
-                    Select::make('booking_type')
-                        ->label('Meeting Type')
-                        ->options([
-                            'internal' => 'Internal',
-                            'eksternal' => 'Eksternal',
-                        ])
-                        ->default('internal')
-                        ->required(),
-                    TextInput::make('title')
-                        ->label('Meeting Description')
-                        ->required()
-                        ->columnSpanFull(),
-
-                ])->columns(2),
-
-                // Hidden Fields
-                Hidden::make('booked_by')->default(auth()->user()->id),
-                Hidden::make('status')->default('booked'),
-            ])->columns(2);
+            ->schema(Schema::formSchema())->columns(1);
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->query(Booking::where('booked_by', auth()->user()->id))
             ->columns([
-                TextColumn::make('room.room_name'),
-                TextColumn::make('bookedBy.name'),
-                TextColumn::make('title')->label('Meeting Description'),
+                TextColumn::make('room.room_name')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('room.floor')
+                    ->sortable()
+                    ->searchable()
+                    ->label('Floor'),
+                TextColumn::make('bookedBy.name')
+                    ->sortable(),
+                TextColumn::make('title')
+                    ->label('Meeting Description')
+                    ->searchable(),
                 TextColumn::make('start_time')
-                    ->dateTime(),
+                    ->sortable()
+                    ->label('Booking Start Date & Time')
+                    ->dateTime(format: 'd-M-Y h:i A'),
                 TextColumn::make('end_time')
-                    ->dateTime(),
+                    ->sortable()
+                    ->label('Booking End Date & Time')
+                    ->dateTime(format: 'd-M-Y h:i A'),
                 TextColumn::make('status')
+                    ->sortable()
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'booked' => 'warning',
@@ -100,8 +74,48 @@ class BookingResource extends Resource
                     })
             ])
             ->filters([
-                //
+                Tables\Filters\Filter::make('start_time')
+                    ->form([
+                        DatePicker::make('booked_from'),
+                        DatePicker::make('booked_until'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['booked_from'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('start_time', '>=', $date),
+                            )
+                            ->when(
+                                $data['booked_until'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('start_time', '<=', $date),
+                            );
+                    })
+                    ->indicateUsing(function (array $data): ?string {
+                        if (!$data['booked_from'] && !$data['booked_until']) {
+                            return null;
+                        }
+
+                        if ($data['booked_from'] && !$data['booked_until']) {
+                            return 'Booked at ' . \Carbon\Carbon::parse($data['booked_from'])->toFormattedDateString();
+                        }
+
+                        if (!$data['booked_from'] && $data['booked_until']) {
+                            return 'Booked until ' . \Carbon\Carbon::parse($data['booked_until'])->toFormattedDateString();
+                        }
+
+                        if ($data['booked_from'] && $data['booked_until']) {
+                            $from = 'Booked at ' . \Carbon\Carbon::parse($data['booked_from'])->toFormattedDateString();
+                            $until = 'until ' . \Carbon\Carbon::parse($data['booked_until'])->toFormattedDateString();
+                            return $from . ' ' . $until;
+                        }
+                    }),
             ])
+            ->filtersTriggerAction(
+                fn (\Filament\Tables\Actions\Action $action) => $action
+                    ->button()
+                    ->label('Filter'),
+            )
+            ->filtersFormColumns(1)
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])
@@ -109,7 +123,8 @@ class BookingResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->searchOnBlur();;
     }
 
     public static function getRelations(): array
@@ -126,34 +141,5 @@ class BookingResource extends Resource
             'create' => Pages\CreateBooking::route('/create'),
             'edit' => Pages\EditBooking::route('/{record}/edit'),
         ];
-    }
-
-    private static function getAvailableRooms($startTime, $endTime): array|\Illuminate\Support\Collection
-    {
-        $data = Room::query()
-            ->where('bookable', true)
-            ->when($startTime && $endTime, function ($query) use ($startTime, $endTime) {
-                $query->whereDoesntHave('bookings', function ($query) use ($startTime, $endTime) {
-                    $query->where('start_time', '<', $endTime)
-                        ->where('end_time', '>', $startTime);
-                });
-            })
-            ->get(['id', 'room_name', 'floor', 'capacity']) // Fetch required columns
-            ->groupBy(function ($room) {
-                return 'Floor ' . $room->floor; // Modify the floor value during grouping
-            })
-            ->map(function ($groupedRooms) {
-                return $groupedRooms->mapWithKeys(function ($room) {
-                    return [
-                        $room->id => $room->room_name . ' [' . $room->capacity . ' pax]'
-                    ];
-                });
-            })
-            ->tap(function ($rooms) {
-                // Add a count of the rooms after grouping by floor
-                $rooms->count = $rooms->flatten()->count(); // Total count of rooms
-            });
-
-        return $data;
     }
 }
