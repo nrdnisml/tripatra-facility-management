@@ -11,13 +11,8 @@ class RoomConnection extends Model
 
     protected $guarded = ['id'];
 
-    public function room()
-    {
-        return $this->belongsTo(Room::class);
-    }
-
-    public function connectedRoom()
-    {
-        return $this->belongsTo(Room::class, 'connected_room_id');
-    }
+    protected $casts = [
+        'room_pictures' => 'json',
+        'room_layouts' => 'json',
+    ];
 }

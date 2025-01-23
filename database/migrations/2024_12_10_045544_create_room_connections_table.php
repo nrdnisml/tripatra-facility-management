@@ -13,15 +13,11 @@ return new class extends Migration
     {
         Schema::create('room_connections', function (Blueprint $table) {
             $table->id(); // Primary Key
-            $table->unsignedBigInteger('room_id'); // Foreign Key to Rooms table
-            $table->unsignedBigInteger('connected_room_id'); // Foreign Key to Connected Rooms
-
-            // Foreign Key Constraints
-            $table->foreign('room_id')->references('id')->on('rooms')->onDelete('cascade');
-            $table->foreign('connected_room_id')->references('id')->on('rooms')->onDelete('cascade');
-
-            // Ensure Unique Room Connections
-            // $table->unique(['room_id', 'connected_room_id']);
+            $table->json('connected_room_id'); // Foreign Key to Connected Rooms
+            $table->integer('capacity')->nullable();
+            $table->integer('floor')->nullable();
+            $table->json('room_pictures')->nullable();
+            $table->json('room_layouts')->nullable();
             $table->timestamps();
         });
     }
