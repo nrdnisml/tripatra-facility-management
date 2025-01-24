@@ -9,6 +9,7 @@ use App\Models\MeetingRoom\RoomConnection;
 use Awcodes\TableRepeater\Components\TableRepeater;
 use Awcodes\TableRepeater\Header;
 use Filament\Forms;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
@@ -17,6 +18,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Forms\Set;
+use Filament\Tables\Columns\TextColumn;
 
 class RoomConnectionResource extends Resource
 {
@@ -30,9 +33,19 @@ class RoomConnectionResource extends Resource
     {
         return $form
             ->schema([
-                TableRepeater::make('create_room_connection')
+                TableRepeater::make('connected_rooms')
+                    ->live()
+                    ->afterStateUpdated(function (Set $set, $state) {
+                        $collection = collect($state);
+                        $roomIds = $collection->pluck('connected_rooms')->all();
+                        $rooms = Room::whereIn('id', $roomIds)->get(['capacity', 'floor']);
+                        $totalCapacity = $rooms->sum('capacity');
+                        $floor = $rooms->first()->floor ?? null;
+                        $set('capacity', $totalCapacity);
+                        $set('floor', $floor);
+                    })
                     ->headers([
-                        Header::make('Meeting Room'),
+                        Header::make('Meeting Room')->markAsRequired(),
                     ])
                     ->schema([
                         Select::make('connected_rooms')
@@ -51,6 +64,7 @@ class RoomConnectionResource extends Resource
                         JS))
                     ->placeholder('0')
                     ->required(),
+                Hidden::make('floor'),
             ])
             ->columns(1);
     }
@@ -59,7 +73,12 @@ class RoomConnectionResource extends Resource
     {
         return $table
             ->columns([
-                //
+                TextColumn::make('room_name')
+                    ->searchable(),
+                TextColumn::make('capacity')
+                    ->label('Total capacity'),
+                TextColumn::make('floor')
+                    ->label('Floor'),
             ])
             ->filters([
                 //

@@ -14,5 +14,6 @@ class RoomConnection extends Model
     protected $casts = [
         'room_pictures' => 'json',
         'room_layouts' => 'json',
+        'connected_rooms' => 'json',
     ];
 }

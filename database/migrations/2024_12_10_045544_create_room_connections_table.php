@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('room_connections', function (Blueprint $table) {
             $table->id(); // Primary Key
-            $table->json('connected_room_id'); // Foreign Key to Connected Rooms
+            $table->json('connected_rooms'); // Foreign Key to Connected Rooms
             $table->integer('capacity')->nullable();
             $table->integer('floor')->nullable();
             $table->json('room_pictures')->nullable();
