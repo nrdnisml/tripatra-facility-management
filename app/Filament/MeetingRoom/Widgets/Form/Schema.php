@@ -27,11 +27,11 @@ class Schema
 
     private static function steps($accounts)
     {
-        $availableRooms = 0;
         return [
             Step::make('Booking Time')->schema([
                 Placeholder::make('Available')
-                    ->label('Room Availability Related to Selected Date & Time : ' . $availableRooms),
+                    ->label('Room Availability')
+                    ->content(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available for selected time'),
                 Fieldset::make('Booking Time')->schema([
                     DateTimePicker::make('start_time')
                         ->native(false)
@@ -53,14 +53,32 @@ class Schema
                 ])->columns(2)
             ]),
             Step::make('Meeting Participants')->schema([
+                Placeholder::make('Available')
+                    ->label('Room Availability')
+                    ->content(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available based on the selected conditions'),
                 Fieldset::make('Participants')->schema([
+                    Select::make('booking_type')
+                        ->label('Meeting For')
+                        ->options([
+                            'internal' => 'Internal',
+                            'eksternal' => 'Eksternal',
+                        ])
+                        ->default('internal')
+                        ->required()
+                        ->columns(1),
                     TextInput::make('number_of_participants')
                         ->label('Number of Participants')
+                        ->mask(\Filament\Support\RawJs::make(<<<'JS'
+                            $input.startsWith('34') || $input.startsWith('37') ? '99' : '99'
+                        JS))
+                        ->placeholder('0')
                         ->required()
-                        ->columnSpanFull(),
+                        ->columns(1),
                     Select::make('internal_participants')
                         ->multiple()
-                        ->options($accounts),
+                        ->options($accounts)
+                        ->hint('Select internal participants to notify them about the meeting')
+                        ->columnSpanFull(),
                     TableRepeater::make('external_participants')
                         ->headers([
                             Header::make('email'),
@@ -69,8 +87,10 @@ class Schema
                         ->schema([
                             TextInput::make('email')->email(),
                             TextInput::make('company'),
-                        ]),
-                ])->columns(1),
+                        ])
+                        ->hint('Add external participants if applicable')
+                        ->columnSpanFull(),
+                ])->columns(2),
             ]),
             Step::make('Select Room')->schema([
                 Fieldset::make('Select Meeting Room & Layout')->schema([
@@ -130,14 +150,7 @@ class Schema
                         ->helperText('Keep empty if not applicable')
                         ->options(\App\Models\Project::query()->pluck('project_name', 'id'))
                         ->searchable(),
-                    Select::make('booking_type')
-                        ->label('Meeting Type')
-                        ->options([
-                            'internal' => 'Internal',
-                            'eksternal' => 'Eksternal',
-                        ])
-                        ->default('internal')
-                        ->required(),
+
                     TextInput::make('title')
                         ->label('Meeting Description')
                         ->required()
@@ -150,13 +163,6 @@ class Schema
         ];
     }
 
-    /*************  ✨ Codeium Command ⭐  *************/
-    /**
-     * Get the schema of the form.
-     *
-     * @return array
-     */
-    /******  1e3f8a03-b6d3-4269-98de-e20d84cab24a  *******/
     public static function formSchema()
     {
         $accounts = \App\Helpers\TripatraUser::getAccountNameIds();
