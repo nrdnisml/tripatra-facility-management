@@ -2,15 +2,16 @@
 
 namespace App\Filament\MeetingRoom\Widgets;
 
-use App\Filament\MeetingRoom\Widgets\Form\Schema;
+use App\Filament\MeetingRoom\Resources\BookingResource\FormSchema\Schema;
 use App\Filament\MeetingRoom\Widgets\Resource\WidgetResource;
 use App\Models\MeetingRoom\Booking;
 use Carbon\Carbon;
 use Filament\Actions\EditAction;
 use Filament\Notifications\Notification;
 use \Guava\Calendar\Widgets\CalendarWidget;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\HtmlString;
 
 class MyCalendarWidget extends CalendarWidget
@@ -57,7 +58,8 @@ class MyCalendarWidget extends CalendarWidget
 
     public function getEventClickContextMenuActions(): array
     {
-        return [
+        $action = [
+            $this->viewAction(),
             $this->editAction()
                 ->before(function (EditAction $action, array $data, Booking $record) {
                     if (!WidgetResource::isRoomAvailable(
@@ -75,8 +77,15 @@ class MyCalendarWidget extends CalendarWidget
                     }
                 })
                 ->closeModalByClickingAway(false),
-            $this->deleteAction(),
+            $this->deleteAction()
         ];
+        return $action;
+    }
+
+    public function onEventClick(array $info = [], ?string $action = null): void
+    {
+        parent::onEventClick($info, $action);
+        dd($info, $action);
     }
 
     public function getSchema(?string $model = null): ?array
@@ -101,7 +110,7 @@ class MyCalendarWidget extends CalendarWidget
         if (in_array($this->getEventModel(), [Booking::class])) {
             $record = $this->getEventRecord();
 
-            if (!auth()->user()->can('update', $record)) {
+            if (!\Illuminate\Support\Facades\Gate::allows('update', $record)) {
                 // If not authorized, show a notification and return
                 Notification::make()
                     ->title('Action Failed')
@@ -164,8 +173,7 @@ class MyCalendarWidget extends CalendarWidget
         parent::onEventResize($info);
 
         $record = $this->getEventRecord();
-        if (!auth()->user()->can('update', $record)) {
-            // If not authorized, show a notification and return
+        if (!\Illuminate\Support\Facades\Gate::allows('update', $record)) {
             Notification::make()
                 ->title('Action Failed')
                 ->body('You do not have permission to move this booking.')
@@ -173,7 +181,6 @@ class MyCalendarWidget extends CalendarWidget
                 ->send();
             return false;
         }
-
 
         if ($delta = data_get($info, 'endDelta')) {
             $endsAt = $record->end_time;
@@ -231,10 +238,10 @@ class MyCalendarWidget extends CalendarWidget
                             'room_id' => $roomId,
                             'start_time' => Carbon::make($startsTime),
                             'end_time' => Carbon::make($endsTime),
-                            'internal_participants' => auth()->user()->id,
+                            'internal_participants' => Auth::user()->id,
                             'status' => 'booked',
                             'booking_type' => 'internal',
-                            'booked_by' => auth()->user()->id,
+                            'booked_by' => Auth::user()->id,
                         ]);
                     }
                 }),

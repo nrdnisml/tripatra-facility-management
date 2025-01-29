@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\MeetingRoom\Widgets\Form;
+namespace App\Filament\MeetingRoom\Resources\BookingResource\FormSchema;
 
 use App\Filament\MeetingRoom\Widgets\Resource\WidgetResource;
 use Awcodes\TableRepeater\Components\TableRepeater;
@@ -15,6 +15,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Wizard\Step;
 use Filament\Forms\Get;
 use Icetalker\FilamentPicker\Forms\Components\Picker;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\HtmlString;
 
 class Schema
@@ -31,7 +32,7 @@ class Schema
             Step::make('Booking Time')->schema([
                 Placeholder::make('Available')
                     ->label('Room Availability')
-                    ->content(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available for selected time'),
+                    ->content(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available for selected time'),
                 Fieldset::make('Booking Time')->schema([
                     DateTimePicker::make('start_time')
                         ->native(false)
@@ -49,13 +50,12 @@ class Schema
                         ->required()
                         ->after('start_time')
                         ->live(onBlur: true),
-
                 ])->columns(2)
             ]),
             Step::make('Meeting Participants')->schema([
                 Placeholder::make('Available')
                     ->label('Room Availability')
-                    ->content(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available based on the selected conditions'),
+                    ->content(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available based on the selected conditions'),
                 Fieldset::make('Participants')->schema([
                     Select::make('booking_type')
                         ->label('Meeting For')
@@ -96,13 +96,12 @@ class Schema
                 Fieldset::make('Select Meeting Room & Layout')->schema([
                     Select::make('room_id')
                         ->label('Meeting Rooms')
-                        ->hint(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
-                        ->options(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time')))
+                        ->hint(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
+                        ->options(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'), currentId: $get('room_id')))
                         ->searchable()
                         ->preload()
                         ->live(onBlur: true)
                         ->required(),
-
                     Placeholder::make('RoomPreview')
                         ->content(function (Get $get): HtmlString {
                             $selected_room = $get('room_id');
@@ -156,7 +155,7 @@ class Schema
                         ->required()
                         ->columnSpanFull(),
                     // Hidden Fields
-                    Hidden::make('booked_by')->default(auth()->user()->id),
+                    Hidden::make('booked_by')->default(Auth::user()->id),
                     Hidden::make('status')->default('booked'),
                 ])
             ])
@@ -196,8 +195,8 @@ class Schema
                     ->live(onBlur: true),
                 Select::make('room_id')
                     ->label('Meeting Rooms')
-                    ->hint(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
-                    ->options(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'), $get('room_id')))
+                    ->hint(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
+                    ->options(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'), currentId: $get('room_id')))
                     ->searchable()
                     ->preload()
                     ->required(),
@@ -222,11 +221,22 @@ class Schema
                 ->label('Participants')
                 ->multiple()
                 ->options($accounts),
+            TableRepeater::make('external_participants')
+                ->headers([
+                    Header::make('email'),
+                    Header::make('company'),
+                ])
+                ->schema([
+                    TextInput::make('email')->email(),
+                    TextInput::make('company'),
+                ])
+                ->hint('Add external participants if applicable')
+                ->columnSpanFull(),
             TextInput::make('title')
                 ->label('Meeting Description')
                 ->required(),
             // Hidden Fields
-            Hidden::make('booked_by')->default(auth()->user()->id),
+            Hidden::make('booked_by')->default(Auth::user()->id),
             Hidden::make('status')->default('booked'),
         ];
     }
