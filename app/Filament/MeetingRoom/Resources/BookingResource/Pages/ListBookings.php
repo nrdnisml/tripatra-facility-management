@@ -36,6 +36,7 @@ class ListBookings extends ListRecords
 
         // Calculate the count for today's bookings
         $bookedTodayCount = Booking::where('status', 'booked')
+            ->where('booked_by', auth()->user()->id)
             ->whereDate('start_time', $today)
             ->count();
         return [
