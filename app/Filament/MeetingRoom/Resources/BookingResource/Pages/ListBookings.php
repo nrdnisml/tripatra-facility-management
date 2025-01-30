@@ -9,6 +9,7 @@ use Filament\Resources\Components\Tab;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 
 class ListBookings extends ListRecords
 {
@@ -19,7 +20,7 @@ class ListBookings extends ListRecords
     public function __construct()
     {
         $this->records = Booking::select('status', DB::raw('count(*) as total'))
-            ->where('booked_by', auth()->user()->id)
+            ->where('booked_by', Auth::user()->id)
             ->groupBy('status')
             ->pluck('total', 'status');
     }
@@ -36,7 +37,7 @@ class ListBookings extends ListRecords
 
         // Calculate the count for today's bookings
         $bookedTodayCount = Booking::where('status', 'booked')
-            ->where('booked_by', auth()->user()->id)
+            ->where('booked_by', Auth::user()->id)
             ->whereDate('start_time', $today)
             ->count();
         return [

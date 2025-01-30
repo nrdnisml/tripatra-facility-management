@@ -2,27 +2,17 @@
 
 namespace App\Filament\MeetingRoom\Resources;
 
+use App\Filament\MeetingRoom\Resources\BookingResource\FormSchema\Schema;
 use App\Filament\MeetingRoom\Resources\BookingResource\Pages;
-use App\Filament\MeetingRoom\Widgets\Form\Schema;
 use App\Models\MeetingRoom\Booking;
-use App\Models\MeetingRoom\Room;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\Fieldset;
-use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
-use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Enums\FiltersLayout;
-use Filament\Tables\Filters\QueryBuilder\Constraints\RelationshipConstraint;
-use Filament\Tables\Filters\QueryBuilder\Constraints\RelationshipConstraint\Operators\IsRelatedToOperator;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class BookingResource extends Resource
 {
@@ -34,7 +24,6 @@ class BookingResource extends Resource
 
     public static function form(Form $form): Form
     {
-        $accounts = \App\Helpers\TripatraUser::getAccountNameIds();
         return $form
             ->schema(Schema::formSchema())->columns(1);
     }
@@ -42,7 +31,7 @@ class BookingResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->query(Booking::where('booked_by', auth()->user()->id))
+            ->query(Booking::where('booked_by', Auth::user()->id))
             ->columns([
                 TextColumn::make('room.room_name')
                     ->searchable()
@@ -67,7 +56,7 @@ class BookingResource extends Resource
                 TextColumn::make('status')
                     ->sortable()
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn(string $state): string => match ($state) {
                         'booked' => 'warning',
                         'confirmed' => 'success',
                         'cancelled' => 'danger',
@@ -83,11 +72,11 @@ class BookingResource extends Resource
                         return $query
                             ->when(
                                 $data['booked_from'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('start_time', '>=', $date),
+                                fn(Builder $query, $date): Builder => $query->whereDate('start_time', '>=', $date),
                             )
                             ->when(
                                 $data['booked_until'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('start_time', '<=', $date),
+                                fn(Builder $query, $date): Builder => $query->whereDate('start_time', '<=', $date),
                             );
                     })
                     ->indicateUsing(function (array $data): ?string {
@@ -111,7 +100,7 @@ class BookingResource extends Resource
                     }),
             ])
             ->filtersTriggerAction(
-                fn (\Filament\Tables\Actions\Action $action) => $action
+                fn(\Filament\Tables\Actions\Action $action) => $action
                     ->button()
                     ->label('Filter'),
             )
