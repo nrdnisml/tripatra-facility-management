@@ -19,6 +19,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Icetalker\FilamentPicker\Forms\Components\Picker;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
@@ -73,15 +74,20 @@ class RoomResource extends Resource
                     ->reorderable()
                     ->appendFiles()
                     ->panelLayout('grid'),
-                Select::make('room_layouts')
+                Picker::make('room_layouts')
                     ->options([
-                        'CLASSROOM' => 'CLASSROOM',
-                        'U-SHAPE' => 'U-SHAPE',
-                        'ROUND TABLE' => 'ROUND TABLE',
-                        'THEATER' => 'THEATER',
+                        'CLASSROOM' => 'Classroom',
+                        'U-SHAPE' => 'U-Shape',
+                        'ROUND-TABLE' => 'Round Table',
+                        'THEATER' => 'Theater',
                     ])
-                    ->default('CLASSROOM')
-                    ->required(),
+                    ->imageSize(100)
+                    ->images([
+                        'CLASSROOM' => asset('assets/img/meeting-room/classroom.png'),
+                        'U-SHAPE' => asset('assets/img/meeting-room/u-shape.png'),
+                        'ROUND-TABLE' => asset('assets/img/meeting-room/round-table.png'),
+                        'THEATER' => asset('assets/img/meeting-room/theater.png'),
+                    ]),
                 Radio::make('bookable')
                     ->label('Is this room bookable?')
                     ->default(true)

@@ -14,6 +14,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Wizard\Step;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Icetalker\FilamentPicker\Forms\Components\Picker;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\HtmlString;
@@ -32,7 +33,7 @@ class Schema
             Step::make('Booking Time')->schema([
                 Placeholder::make('Available')
                     ->label('Room Availability')
-                    ->content(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available for selected time'),
+                    ->content(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available for selected time'),
                 Fieldset::make('Booking Time')->schema([
                     DateTimePicker::make('start_time')
                         ->native(false)
@@ -55,7 +56,7 @@ class Schema
             Step::make('Meeting Participants')->schema([
                 Placeholder::make('Available')
                     ->label('Room Availability')
-                    ->content(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available based on the selected conditions'),
+                    ->content(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available based on the selected conditions'),
                 Fieldset::make('Participants')->schema([
                     Select::make('booking_type')
                         ->label('Meeting For')
@@ -96,10 +97,13 @@ class Schema
                 Fieldset::make('Select Meeting Room & Layout')->schema([
                     Select::make('room_id')
                         ->label('Meeting Rooms')
-                        ->hint(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
-                        ->options(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'), currentId: $get('room_id')))
+                        ->hint(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
+                        ->options(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'), currentId: $get('room_id')))
                         ->searchable()
                         ->preload()
+                        ->afterStateUpdated(function (Set $set, $state) {
+                            $set('room_layouts', \App\Models\MeetingRoom\Room::find($state)->room_layouts);
+                        })
                         ->live(onBlur: true)
                         ->required(),
                     Placeholder::make('RoomPreview')
@@ -121,25 +125,22 @@ class Schema
                         })->columnSpanFull(),
                     Picker::make('room_layouts')
                         ->options([
-                            'CLASSROOM' => 'CLASSROOM',
-                            'U-SHAPE' => 'U-SHAPE',
-                            'ROUND TABLE' => 'ROUND TABLE',
-                            'THEATER' => 'THEATER',
-                        ])
-                        ->icons([
-                            'CLASSROOM' => 'heroicon-o-home',
-                            'U-SHAPE' => 'heroicon-o-paper-airplane',
-                            'ROUND TABLE' => 'heroicon-o-truck',
-                            'THEATER' => 'heroicon-o-truck',
+                            'CLASSROOM' => 'Classroom',
+                            'U-SHAPE' => 'U-Shape',
+                            'ROUND-TABLE' => 'Round Table',
+                            'THEATER' => 'Theater',
                         ])
                         ->imageSize(100)
                         ->images([
-                            'CLASSROOM' => 'https://source.unsplash.com/random/100x100',
-                            'U-SHAPE' => 'https://source.unsplash.com/random/100x100/?airplane',
-                            'ROUND TABLE' => 'https://source.unsplash.com/random/100x100?truck',
-                            'THEATER' => 'https://source.unsplash.com/random/100x100?truck',
+                            'CLASSROOM' => asset('assets/img/meeting-room/classroom.png'),
+                            'U-SHAPE' => asset('assets/img/meeting-room/u-shape.png'),
+                            'ROUND-TABLE' => asset('assets/img/meeting-room/round-table.png'),
+                            'THEATER' => asset('assets/img/meeting-room/theater.png'),
                         ])
-                        ->default('THEATER'),
+                        ->default(fn (Get $get) =>
+                        $get('room_id') ?
+                            \App\Models\MeetingRoom\Room::find($get('room_id'))->room_layouts
+                            : 'U-SHAPE'),
                 ])->columns(1),
             ]),
             Step::make('Booking Details')->schema([
@@ -176,6 +177,9 @@ class Schema
     {
         $accounts = \App\Helpers\TripatraUser::getAccountNameIds();
         return  [
+            TextInput::make('title')
+                ->label('Meeting Description')
+                ->required(),
             Group::make([
                 DateTimePicker::make('start_time')
                     ->native(false)
@@ -195,8 +199,8 @@ class Schema
                     ->live(onBlur: true),
                 Select::make('room_id')
                     ->label('Meeting Rooms')
-                    ->hint(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
-                    ->options(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'), currentId: $get('room_id')))
+                    ->hint(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
+                    ->options(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'), currentId: $get('room_id')))
                     ->searchable()
                     ->preload()
                     ->required(),
@@ -215,7 +219,6 @@ class Schema
                     ->helperText('Keep empty if not applicable')
                     ->options(\App\Models\Project::query()->pluck('project_name', 'id'))
                     ->searchable(),
-
             ])->columns(2),
             Select::make('internal_participants')
                 ->label('Participants')
@@ -232,9 +235,6 @@ class Schema
                 ])
                 ->hint('Add external participants if applicable')
                 ->columnSpanFull(),
-            TextInput::make('title')
-                ->label('Meeting Description')
-                ->required(),
             // Hidden Fields
             Hidden::make('booked_by')->default(Auth::user()->id),
             Hidden::make('status')->default('booked'),
