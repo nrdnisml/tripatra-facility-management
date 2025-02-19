@@ -3,6 +3,7 @@
 namespace App\Filament\MeetingRoom\Resources\BookingResource\Pages;
 
 use App\Filament\MeetingRoom\Resources\BookingResource;
+use App\Helpers\UserHelper;
 use App\Models\MeetingRoom\Booking;
 use Filament\Actions;
 use Filament\Resources\Components\Tab;
@@ -19,10 +20,15 @@ class ListBookings extends ListRecords
 
     public function __construct()
     {
-        $this->records = Booking::select('status', DB::raw('count(*) as total'))
-            ->where('booked_by', Auth::user()->id)
-            ->groupBy('status')
-            ->pluck('total', 'status');
+        $user_role = UserHelper::getUserRoleName('meeting-room');
+        $query = Booking::select('status', DB::raw('count(*) as total'))
+            ->groupBy('status');
+
+        if ($user_role !== 'admin') {
+            $query->where('booked_by', Auth::user()->id);
+        }
+
+        $this->records = $query->pluck('total', 'status');
     }
     protected function getHeaderActions(): array
     {
@@ -34,12 +40,13 @@ class ListBookings extends ListRecords
     public function getTabs(): array
     {
         $today = \Carbon\Carbon::today();
-
         // Calculate the count for today's bookings
-        $bookedTodayCount = Booking::where('status', 'booked')
-            ->where('booked_by', Auth::user()->id)
-            ->whereDate('start_time', $today)
-            ->count();
+        $bookedTodayCountQuery = Booking::where('status', 'booked')
+            ->whereDate('start_time', $today);
+        if (UserHelper::getUserRoleName('meeting-room') !== 'admin') {
+            $bookedTodayCountQuery->where('booked_by', Auth::user()->id);
+        }
+        $bookedTodayCount = $bookedTodayCountQuery->count();
         return [
             "Unconfirmed Bookings for Today" => Tab::make()->modifyQueryUsing(
                 function ($query) {
@@ -57,13 +64,13 @@ class ListBookings extends ListRecords
 
             'Confirmed' => Tab::make()
                 ->modifyQueryUsing(
-                    fn ($query) =>
+                    fn($query) =>
                     $query->where('status', 'confirmed')
                 )->badge($this->records['confirmed'] ?? 0),
 
             'Cancelled' => Tab::make()
                 ->modifyQueryUsing(
-                    fn ($query) =>
+                    fn($query) =>
                     $query->where('status', 'cancelled')
                 )->badge($this->records['cancelled'] ?? 0),
         ];

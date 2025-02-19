@@ -4,6 +4,7 @@ namespace App\Filament\MeetingRoom\Resources;
 
 use App\Filament\MeetingRoom\Resources\BookingResource\FormSchema\Schema;
 use App\Filament\MeetingRoom\Resources\BookingResource\Pages;
+use App\Helpers\UserHelper;
 use App\Models\MeetingRoom\Booking;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Form;
@@ -31,7 +32,14 @@ class BookingResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->query(Booking::where('booked_by', Auth::user()->id))
+            ->query(function () {
+                $user_role = UserHelper::getUserRoleName('meeting-room');
+                if ($user_role == 'admin') {
+                    return Booking::query();
+                } else {
+                    return Booking::query()->where('booked_by', Auth::id());
+                }
+            })
             ->columns([
                 TextColumn::make('room.room_name')
                     ->searchable()

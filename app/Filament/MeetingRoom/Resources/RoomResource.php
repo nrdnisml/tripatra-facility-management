@@ -3,11 +3,12 @@
 namespace App\Filament\MeetingRoom\Resources;
 
 use App\Filament\MeetingRoom\Resources\RoomResource\Pages;
-use App\Filament\MeetingRoom\Resources\RoomResource\RelationManagers;
-use App\Filament\MeetingRoom\Resources\RoomResource\RelationManagers\ConnectedRoomsRelationManager;
 use App\Models\MeetingRoom\Room;
+use Awcodes\TableRepeater\Components\TableRepeater;
+use Awcodes\TableRepeater\Header;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
@@ -17,11 +18,8 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Icetalker\FilamentPicker\Forms\Components\Picker;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class RoomResource extends Resource
 {
@@ -45,20 +43,19 @@ class RoomResource extends Resource
                     ])
                     ->default('internal')
                     ->required(),
-                TextInput::make('capacity')
+                Hidden::make('capacity')
                     ->label('Room capacity')
                     ->mask(\Filament\Support\RawJs::make(<<<'JS'
                             $input.startsWith('34') || $input.startsWith('37') ? '99' : '99'
                         JS))
                     ->placeholder('0')
                     ->live()
-                    ->afterStateUpdated(fn (Forms\Set $set, $state) => $set('facilities', [
+                    ->afterStateUpdated(fn(Forms\Set $set, $state) => $set('facilities', [
                         'Kursi' => $state,
                         'Meja' => ceil($state / 2),
                         'LCD Proyektor' => 1,
                         'Monitor' => 0,
-                    ]))
-                    ->required(),
+                    ])),
                 TextInput::make('floor')
                     ->label('Room floor')
                     ->mask(\Filament\Support\RawJs::make(<<<'JS'
@@ -74,20 +71,65 @@ class RoomResource extends Resource
                     ->reorderable()
                     ->appendFiles()
                     ->panelLayout('grid'),
-                Picker::make('room_layouts')
-                    ->options([
-                        'CLASSROOM' => 'Classroom',
-                        'U-SHAPE' => 'U-Shape',
-                        'ROUND-TABLE' => 'Round Table',
-                        'THEATER' => 'Theater',
+                // Picker::make('room_layouts')
+                //     ->options([
+                //         'CLASSROOM' => 'Classroom',
+                //         'U-SHAPE' => 'U-Shape',
+                //         'ROUND-TABLE' => 'Round Table',
+                //         'THEATER' => 'Theater',
+                //     ])
+                //     ->imageSize(100)
+                //     ->images([
+                //         'CLASSROOM' => asset('assets/img/meeting-room/classroom.png'),
+                //         'U-SHAPE' => asset('assets/img/meeting-room/u-shape.png'),
+                //         'ROUND-TABLE' => asset('assets/img/meeting-room/round-table.png'),
+                //         'THEATER' => asset('assets/img/meeting-room/theater.png'),
+                //     ]),
+                // KeyValue::make('room_layouts')
+                //     ->keyLabel('Layout Name')
+                //     ->valueLabel('Capacity')
+                //     ->default([
+                //         'Classroom' => 0,
+                //         'U-Shape' => 0,
+                //         'Round Table' => 0,
+                //         'Theater' => 0,
+                //     ])
+                //     ->editableKeys(false)
+                //     ->deletable(false)
+                //     ->addable(false),
+                TableRepeater::make('room_layouts')
+                    ->live()
+                    ->defaultItems('4')
+                    ->addable(false)
+                    ->default([
+                        [
+                            'layout_name' => 'Classroom',
+                            'capacity' => 0,
+                        ],
+                        [
+                            'layout_name' => 'U-Shape',
+                            'capacity' => 0,
+                        ],
+                        [
+                            'layout_name' => 'Round Table',
+                            'capacity' => 0,
+                        ],
+                        [
+                            'layout_name' => 'Theater',
+                            'capacity' => 0,
+                        ],
                     ])
-                    ->imageSize(100)
-                    ->images([
-                        'CLASSROOM' => asset('assets/img/meeting-room/classroom.png'),
-                        'U-SHAPE' => asset('assets/img/meeting-room/u-shape.png'),
-                        'ROUND-TABLE' => asset('assets/img/meeting-room/round-table.png'),
-                        'THEATER' => asset('assets/img/meeting-room/theater.png'),
-                    ]),
+                    ->headers([
+                        Header::make('Layout Name')->markAsRequired(),
+                        Header::make('Capacity')->markAsRequired(),
+                    ])
+                    ->schema([
+                        TextInput::make('layout_name')
+                            ->required(),
+                        TextInput::make('capacity')
+                            ->required(),
+                    ])
+                    ->columns(1),
                 Radio::make('bookable')
                     ->label('Is this room bookable?')
                     ->default(true)
@@ -145,11 +187,11 @@ class RoomResource extends Resource
                 IconColumn::make('bookable')
                     ->sortable()
                     ->boolean()
-                    ->tooltip(fn ($record) => $record->bookable ? 'True' : 'False'),
+                    ->tooltip(fn($record) => $record->bookable ? 'True' : 'False'),
                 IconColumn::make('mergeable')
                     ->sortable()
                     ->boolean()
-                    ->tooltip(fn ($record) => $record->bookable ? 'True' : 'False'),
+                    ->tooltip(fn($record) => $record->bookable ? 'True' : 'False'),
             ])
             ->filters([
                 //

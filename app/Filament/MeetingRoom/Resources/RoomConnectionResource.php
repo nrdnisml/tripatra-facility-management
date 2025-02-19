@@ -50,7 +50,7 @@ class RoomConnectionResource extends Resource
                     ->schema([
                         Select::make('connected_rooms')
                             ->options(function () {
-                                return Room::orderBy('floor')->get()->mapWithKeys(function ($room) {
+                                return Room::where('mergeable', true)->orderBy('floor')->get()->mapWithKeys(function ($room) {
                                     return [$room->id => $room->room_name . ' (floor ' . $room->floor . ')'];
                                 })->toArray();
                             })

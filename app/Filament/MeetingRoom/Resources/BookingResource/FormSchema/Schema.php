@@ -30,10 +30,10 @@ class Schema
     private static function steps($accounts)
     {
         return [
-            Step::make('Booking Time')->schema([
+            Step::make('Booking Time & Description')->schema([
                 Placeholder::make('Available')
                     ->label('Room Availability')
-                    ->content(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available for selected time'),
+                    ->content(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available for selected time'),
                 Fieldset::make('Booking Time')->schema([
                     DateTimePicker::make('start_time')
                         ->native(false)
@@ -51,12 +51,24 @@ class Schema
                         ->required()
                         ->after('start_time')
                         ->live(onBlur: true),
-                ])->columns(2)
+                ])->columns(2),
+                Fieldset::make('Booking Details')->schema([
+                    TextInput::make('title')
+                        ->label('Meeting Description')
+                        ->required()
+                        ->columnSpanFull(),
+                    Select::make('project_id')
+                        ->label('Project Name')
+                        ->helperText('Keep empty if not applicable')
+                        ->options(\App\Models\Project::query()->pluck('project_name', 'id'))
+                        ->columnSpanFull()
+                        ->searchable(),
+                    // Hidden Fields
+                    Hidden::make('booked_by')->default(Auth::user()->id),
+                    Hidden::make('status')->default('booked'),
+                ]),
             ]),
-            Step::make('Meeting Participants')->schema([
-                Placeholder::make('Available')
-                    ->label('Room Availability')
-                    ->content(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available based on the selected conditions'),
+            Step::make('Participants')->schema([
                 Fieldset::make('Participants')->schema([
                     Select::make('booking_type')
                         ->label('Meeting For')
@@ -97,8 +109,8 @@ class Schema
                 Fieldset::make('Select Meeting Room & Layout')->schema([
                     Select::make('room_id')
                         ->label('Meeting Rooms')
-                        ->hint(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
-                        ->options(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'), currentId: $get('room_id')))
+                        ->hint(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
+                        ->options(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'), currentId: $get('room_id')))
                         ->searchable()
                         ->preload()
                         ->afterStateUpdated(function (Set $set, $state) {
@@ -137,29 +149,12 @@ class Schema
                             'ROUND-TABLE' => asset('assets/img/meeting-room/round-table.png'),
                             'THEATER' => asset('assets/img/meeting-room/theater.png'),
                         ])
-                        ->default(fn (Get $get) =>
+                        ->default(fn(Get $get) =>
                         $get('room_id') ?
                             \App\Models\MeetingRoom\Room::find($get('room_id'))->room_layouts
                             : 'U-SHAPE'),
                 ])->columns(1),
             ]),
-            Step::make('Booking Details')->schema([
-                Fieldset::make('Booking Details')->schema([
-                    Select::make('project_id')
-                        ->label('Project Name')
-                        ->helperText('Keep empty if not applicable')
-                        ->options(\App\Models\Project::query()->pluck('project_name', 'id'))
-                        ->searchable(),
-
-                    TextInput::make('title')
-                        ->label('Meeting Description')
-                        ->required()
-                        ->columnSpanFull(),
-                    // Hidden Fields
-                    Hidden::make('booked_by')->default(Auth::user()->id),
-                    Hidden::make('status')->default('booked'),
-                ])
-            ])
         ];
     }
 
@@ -199,8 +194,8 @@ class Schema
                     ->live(onBlur: true),
                 Select::make('room_id')
                     ->label('Meeting Rooms')
-                    ->hint(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
-                    ->options(fn (Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'), currentId: $get('room_id')))
+                    ->hint(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'))->count . ' rooms available')
+                    ->options(fn(Get $get) => WidgetResource::getAvailableRooms($get('start_time'), $get('end_time'), currentId: $get('room_id')))
                     ->searchable()
                     ->preload()
                     ->required(),

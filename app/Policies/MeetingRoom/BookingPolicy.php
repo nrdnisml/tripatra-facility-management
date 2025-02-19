@@ -2,6 +2,7 @@
 
 namespace App\Policies\MeetingRoom;
 
+use App\Helpers\UserHelper;
 use App\Models\MeetingRoom\Booking;
 use App\Models\User;
 
@@ -17,11 +18,11 @@ class BookingPolicy
 
     public function update(User $user, Booking  $booking)
     {
-        return $user->id == $booking->booked_by;
+        return $user->id == $booking->booked_by || UserHelper::getUserRoleName('meeting-room') == 'admin';
     }
 
     public function delete(User $user, Booking  $booking)
     {
-        return $user->id == $booking->booked_by;
+        return $user->id == $booking->booked_by || UserHelper::getUserRoleName('meeting-room') == 'admin';
     }
 }
